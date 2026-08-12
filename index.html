@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cohortes Mo-99 (padre) → Tc-99m (hijo) · demostración clic a clic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root{
+    --papel:#F7F8F6; --tinta:#1B2430; --tinta-2:#5A6472; --apagado:#8C8F8A;
+    --padre:#1F6FB2; --padre-claro:#DCEAF6;
+    --hijo:#E05A2B; --hijo-claro:#FBE7DD;
+    --tarjeta:#FFFFFF; --borde:#E3E5E1;
+    --lcd-fondo:#22262B; --lcd-digito:#FFB454;
+  }
+  *{ box-sizing:border-box; margin:0; }
+  body{
+    background:var(--papel); color:var(--tinta);
+    font-family:'IBM Plex Sans', sans-serif; font-size:15px; line-height:1.55;
+    padding:28px 20px 48px;
+  }
+  .marco{ max-width:1180px; margin:0 auto; }
+  .ceja{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.14em;
+    text-transform:uppercase; color:var(--tinta-2); margin-bottom:6px;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:clamp(22px, 3vw, 30px);
+    line-height:1.2; margin-bottom:4px;
+  }
+  h1 .padre-t{ color:var(--padre); } h1 .hijo-t{ color:var(--hijo); }
+  .baja{ color:var(--tinta-2); max-width:70ch; margin-bottom:20px; }
+  .controles{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px; }
+  button{
+    font-family:'IBM Plex Sans', sans-serif; font-size:14px; font-weight:500;
+    padding:9px 16px; border-radius:8px; border:1px solid var(--borde);
+    background:var(--tarjeta); color:var(--tinta); cursor:pointer;
+  }
+  button:hover{ border-color:var(--tinta-2); }
+  button:focus-visible{ outline:2px solid var(--padre); outline-offset:2px; }
+  button:active{ transform:scale(0.98); }
+  button:disabled{ opacity:0.45; cursor:default; }
+  button.primario{ background:var(--tinta); border-color:var(--tinta); color:#fff; }
+  button.primario:hover{ background:#2A3546; }
+  button.eluir{ border-color:var(--hijo); color:var(--hijo); font-weight:500; }
+  button.eluir:hover{ background:var(--hijo-claro); border-color:var(--hijo); }
+
+  .panel{
+    display:grid; grid-template-columns: 300px 1fr 1fr 1fr 1fr; gap:14px;
+    margin-bottom:16px;
+  }
+  @media (max-width: 900px){ .panel{ grid-template-columns:1fr 1fr; } }
+  @media (max-width: 560px){ .panel{ grid-template-columns:1fr; } }
+
+  .activimetro{
+    background:var(--lcd-fondo); border-radius:12px; padding:14px 16px;
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .activimetro .rotulo{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.12em;
+    text-transform:uppercase; color:#9AA3AD; margin-bottom:6px;
+  }
+  .activimetro .lectura{
+    font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:38px;
+    color:var(--lcd-digito); font-variant-numeric:tabular-nums; line-height:1;
+  }
+  .activimetro .lectura small{ font-size:16px; font-weight:500; margin-left:4px; }
+  .activimetro .secundaria{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:#9AA3AD; margin-top:6px;
+  }
+  .tarjeta{
+    background:var(--tarjeta); border:1px solid var(--borde); border-radius:12px;
+    padding:12px 16px;
+  }
+  .tarjeta .rotulo{ font-size:12.5px; color:var(--tinta-2); margin-bottom:4px; }
+  .tarjeta .rotulo.padre-t{ color:var(--padre); font-weight:500; }
+  .tarjeta .valor{
+    font-family:'IBM Plex Mono', monospace; font-size:24px; font-weight:600;
+    font-variant-numeric:tabular-nums;
+  }
+  .tarjeta .valor small{ font-size:13px; font-weight:500; color:var(--tinta-2); }
+  .tarjeta .nota{ font-size:12px; color:var(--apagado); margin-top:2px; }
+
+  .narracion{
+    background:var(--hijo-claro); border:1px solid #F0C4AD; border-radius:12px;
+    padding:13px 16px; font-size:14.5px; margin-bottom:20px; min-height:64px;
+  }
+  .narracion strong{ font-weight:600; }
+
+  .escenario{ display:grid; grid-template-columns: 1fr 1fr; gap:20px; align-items:start; }
+  @media (max-width: 900px){ .escenario{ grid-template-columns:1fr; } }
+  .bloque h2{
+    font-family:'Space Grotesk', sans-serif; font-weight:500; font-size:16px; margin-bottom:2px;
+  }
+  .bloque .sub{ font-size:12.5px; color:var(--tinta-2); margin-bottom:10px; }
+  .leyenda{ display:flex; flex-wrap:wrap; gap:14px; font-size:12px; color:var(--tinta-2); margin-bottom:8px; }
+  .leyenda span{ display:flex; align-items:center; gap:5px; }
+  .chip{ width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .barra-mini{ width:14px; height:6px; border-radius:3px; display:inline-block; }
+  .linea-mini{ width:14px; height:0; display:inline-block; }
+  canvas.figura{ width:100%; display:block; background:var(--tarjeta); border:1px solid var(--borde); border-radius:12px; }
+  .lienzo-grafico{
+    position:relative; height:432px; background:var(--tarjeta);
+    border:1px solid var(--borde); border-radius:12px; padding:12px;
+  }
+  .pie{
+    margin-top:24px; padding-top:14px; border-top:1px solid var(--borde);
+    font-size:12.5px; color:var(--tinta-2); max-width:90ch;
+  }
+</style>
+</head>
+<body>
+<div class="marco">
+  <p class="ceja">Radiofarmacia · Cinética de generadores · 1 clic = 1 hora</p>
+  <h1>¿Cómo alcanza el <span class="hijo-t">Tc-99m (hijo)</span> la actividad del <span class="padre-t">Mo-99 (padre)</span>?</h1>
+  <p class="baja">El padre Mo-99 (semivida 66 h) emite cada hora una <strong>cohorte</strong> de ~10<sup>14</sup> átomos de Tc-99m. Cada cohorte se desvanece con semivida de 6 h, pero <strong>no desaparece antes de que nazca la siguiente</strong>: la actividad disponible es la suma de todo lo que aún no muere.</p>
+
+  <div class="controles">
+    <button id="btnPaso" class="primario">Avanzar 1 hora</button>
+    <button id="btnPaso6">Avanzar 6 h</button>
+    <button id="btnPaso12">Avanzar 12 h</button>
+    <button id="btnEluir" class="eluir">Eluir</button>
+    <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--tinta-2);">Eficiencia
+      <select id="selEf" style="font-family:'IBM Plex Sans',sans-serif; font-size:13px; padding:7px 8px; border-radius:8px; border:1px solid var(--borde); background:var(--tarjeta); color:var(--tinta);">
+        <option value="100">100% (ideal)</option>
+        <option value="95">95%</option>
+        <option value="85" selected>85% (típica)</option>
+        <option value="75">75%</option>
+      </select>
+    </label>
+    <button id="btnReiniciar">Reiniciar</button>
+  </div>
+
+  <div class="panel">
+    <div class="activimetro" role="status" aria-live="polite">
+      <div class="rotulo">Activímetro · Tc-99m (hijo)</div>
+      <div class="lectura"><span id="lcdHijo">0</span><small>mCi</small></div>
+      <div class="secundaria" id="lcdHijoSec">0.0 GBq · Σ cohortes vivas</div>
+    </div>
+    <div class="tarjeta">
+      <div class="rotulo padre-t">Mo-99 (padre) · decae con T½ = 66 h</div>
+      <div class="valor"><span id="valPadre">1 000</span> <small>mCi</small></div>
+      <div class="nota" id="notaPadre">37.0 GBq · alimenta al hijo: 876 mCi (87.6%)</div>
+    </div>
+    <div class="tarjeta">
+      <div class="rotulo">Tiempo desde la calibración</div>
+      <div class="valor"><span id="valTiempo">0</span> <small>h</small></div>
+      <div class="nota" id="notaCohortes">0 cohortes emitidas</div>
+    </div>
+    <div class="tarjeta">
+      <div class="rotulo">Hijo / padre</div>
+      <div class="valor"><span id="valPct">0</span><small>%</small></div>
+      <div class="nota">meta transitoria ≈ 96%</div>
+    </div>
+    <div class="tarjeta">
+      <div class="rotulo" style="color:var(--hijo); font-weight:500;">Jeringa · última elución</div>
+      <div class="valor" id="valJeringa">—</div>
+      <div class="nota" id="notaJeringa">aún sin eluir</div>
+    </div>
+  </div>
+
+  <div class="narracion" id="narracion" aria-live="polite">
+    Generador recién calibrado: <strong>1 000 mCi de Mo-99 (padre)</strong> y ninguna cohorte de Tc-99m (hijo) todavía. Presiona <strong>Avanzar 1 hora</strong>: nacerá la primera cohorte y las siguientes se irán apilando sobre ella. La pregunta: si cada hora nace una cohorte nueva y las viejas pierden solo un 10.9%, ¿hasta dónde sube la suma?
+  </div>
+
+  <div class="escenario">
+    <div class="bloque">
+      <h2>Vidas de las cohortes de Tc-99m (hijo)</h2>
+      <p class="sub">Una fila por cohorte. El color se desvanece a medida que la cohorte decae, pero sigue presente cuando nacen las siguientes.</p>
+      <div class="leyenda">
+        <span><span class="chip" style="background:var(--padre);"></span>nacimiento (emisión del padre)</span>
+        <span><span class="barra-mini" style="background:var(--hijo);"></span>actividad restante de la cohorte</span>
+      </div>
+      <canvas id="cvCohortes" class="figura" width="560" height="424" role="img" aria-label="Línea de tiempo con una fila por cohorte horaria de Tc-99m: cada barra se desvanece hacia la derecha sin desaparecer mientras nacen las cohortes siguientes"></canvas>
+    </div>
+    <div class="bloque">
+      <h2>Actividad en el tiempo (mCi)</h2>
+      <p class="sub">La suma de cohortes del hijo sube escalón a escalón hasta rozar al padre; luego ambos descienden juntos.</p>
+      <div class="leyenda">
+        <span><span class="linea-mini" style="border-top:3px solid var(--hijo);"></span>A Tc-99m (hijo) = Σ cohortes</span>
+        <span><span class="linea-mini" style="border-top:3px dashed var(--padre);"></span>A Mo-99 (padre)</span>
+        <span><span class="linea-mini" style="border-top:2px dotted #7FB0D8;"></span>fracción que alimenta (87.6%)</span>
+      </div>
+      <div class="lienzo-grafico">
+        <canvas id="chGrafico" role="img" aria-label="Gráfico en milicuries: la actividad del hijo Tc-99m sube hora a hora hasta casi alcanzar la del padre Mo-99, que desciende lentamente, y luego ambas bajan en paralelo">Actividad del hijo subiendo hasta casi alcanzar la del padre que decae.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <p class="pie"><strong>Supuestos del modelo:</strong> calibración 1 000 mCi (37 GBq) de Mo-99; semividas 66 h (padre) y 6.01 h (hijo); ramificación 87.6% de las desintegraciones del padre hacia el estado metaestable; cohortes discretizadas en pasos de 1 hora, cuya suma geométrica reproduce exactamente la solución de Bateman; eficiencia de elución seleccionable entre 75% y 100% (85% como valor típico de generadores comerciales; la jeringa se lleva ese porcentaje de todas las cohortes por igual y el padre queda intacto en la columna). La actividad del hijo se estabiliza cerca del 96% de la del padre: 87.6% de ramificación × 110% de exceso por el decaimiento del padre (λ<sub>hijo</sub>/(λ<sub>hijo</sub>−λ<sub>padre</sub>) ≈ 1.10).</p>
+</div>
+
+<script>
+const L_PADRE = Math.log(2)/66;
+const L_HIJO  = Math.log(2)/6.01;
+const RAMA = 0.876;
+const A0_MCI = 1000;
+const F_HIJO = Math.exp(-L_HIJO);
+const F_PADRE = Math.exp(-L_PADRE);
+const GANANCIA = 1 - F_HIJO;
+const MAX_H = 36;
+
+let cohortes, tAhora, eqAvisado, eluciones, totalEluido;
+const puntos = { hijo:[], padre:[], alimenta:[] };
+
+const fmt = n => Math.round(n).toLocaleString('es-CL');
+const gbq = m => (m*0.037).toFixed(1);
+const aPadre = h => A0_MCI * Math.pow(F_PADRE, h);
+function aHijo(){
+  let s = 0;
+  for(const c of cohortes) s += c.aNow;
+  return s;
+}
+
+function reiniciar(){
+  cohortes = []; tAhora = 0; eqAvisado = false; eluciones = []; totalEluido = 0;
+  document.getElementById('valJeringa').textContent = '—';
+  document.getElementById('notaJeringa').textContent = 'aún sin eluir';
+  puntos.hijo.length = 0; puntos.padre.length = 0; puntos.alimenta.length = 0;
+  puntos.hijo.push({x:0,y:0});
+  puntos.padre.push({x:0,y:A0_MCI});
+  puntos.alimenta.push({x:0,y:RAMA*A0_MCI});
+  document.getElementById('narracion').innerHTML = 'Generador recién calibrado: <strong>1 000 mCi de Mo-99 (padre)</strong> y ninguna cohorte de Tc-99m (hijo) todavía. Presiona <strong>Avanzar 1 hora</strong>: nacerá la primera cohorte y las siguientes se irán apilando sobre ella. La pregunta: si cada hora nace una cohorte nueva y las viejas pierden solo un 10.9%, ¿hasta dónde sube la suma?';
+  ['btnPaso','btnPaso6','btnPaso12'].forEach(id => document.getElementById(id).disabled = false);
+  dibujar(); tarjetas(); grafico.update('none');
+}
+
+function paso(){
+  if(tAhora >= MAX_H) return;
+  const padreIni = aPadre(tAhora);
+  tAhora++;
+  for(const c of cohortes){ c.aNow *= F_HIJO; c.hist.push(c.aNow); }
+  const a0 = RAMA * padreIni * GANANCIA;
+  cohortes.push({ nace: tAhora, a0: a0, aNow: a0, hist: [a0] });
+
+  const total = aHijo();
+  const padreAhora = aPadre(tAhora);
+  const pct = Math.round(100 * total / padreAhora);
+  const viejas = total - a0;
+
+  let msg = '<strong>Hora ' + tAhora + ':</strong> el Mo-99 (padre) emite la cohorte n.º' + cohortes.length +
+            ', que aporta <strong>' + fmt(a0) + ' mCi</strong> propios de Tc-99m (hijo). ';
+  if(cohortes.length > 1){
+    msg += 'Las ' + (cohortes.length-1) + ' cohortes anteriores <strong>no han desaparecido</strong>: entre todas conservan ' + fmt(viejas) + ' mCi. ';
+  }
+  msg += 'Suma total del hijo: <strong>' + fmt(total) + ' mCi</strong> (' + gbq(total) + ' GBq), el <strong>' + pct + '%</strong> del padre.';
+
+  if(pct >= 94 && !eqAvisado){
+    eqAvisado = true;
+    msg += '<br><br><strong>Equilibrio transitorio:</strong> lo que las cohortes viejas pierden cada hora ya iguala a lo que la nueva aporta. La suma no sube más: <strong>persigue al padre desde ~96%</strong> mientras ambos descienden juntos.';
+  }
+  if(tAhora >= MAX_H){
+    msg += '<br><br><strong>Fin de la demostración (36 h).</strong> Ninguna cohorte esperó su turno: todas se superponen, cada una desvaneciéndose con semivida de 6 h. El hijo alcanzó al padre porque el padre repone cada hora casi exactamente lo que la pila de cohortes pierde.';
+    ['btnPaso','btnPaso6','btnPaso12'].forEach(id => document.getElementById(id).disabled = true);
+  }
+  document.getElementById('narracion').innerHTML = msg;
+
+  puntos.hijo.push({x:tAhora, y:total});
+  puntos.padre.push({x:tAhora, y:padreAhora});
+  puntos.alimenta.push({x:tAhora, y:RAMA*padreAhora});
+  dibujar(); tarjetas(); grafico.update('none');
+}
+
+function tarjetas(){
+  const total = aHijo(), p = aPadre(tAhora);
+  document.getElementById('lcdHijo').textContent = fmt(total);
+  document.getElementById('lcdHijoSec').textContent = gbq(total) + ' GBq · Σ ' + cohortes.length + ' cohortes';
+  document.getElementById('valPadre').textContent = fmt(p);
+  document.getElementById('notaPadre').textContent = gbq(p) + ' GBq · alimenta al hijo: ' + fmt(RAMA*p) + ' mCi (87.6%)';
+  document.getElementById('valTiempo').textContent = tAhora;
+  document.getElementById('notaCohortes').textContent = cohortes.length + ' cohortes emitidas';
+  document.getElementById('valPct').textContent = p > 0 ? Math.round(100*total/p) : 0;
+}
+
+const cv = document.getElementById('cvCohortes');
+const g = cv.getContext('2d');
+function dibujar(){
+  g.clearRect(0,0,cv.width,cv.height);
+  const X0 = 36, XW = cv.width - X0 - 14, Y0 = 18, RH = 10.6;
+  const tMax = MAX_H + 2;
+  const px = h => X0 + XW*h/tMax;
+  g.font = '11px "IBM Plex Mono", monospace';
+  for(let h=0; h<=tMax; h+=6){
+    g.strokeStyle = '#E3E5E1'; g.beginPath();
+    g.moveTo(px(h), Y0-6); g.lineTo(px(h), Y0+MAX_H*RH); g.stroke();
+    g.fillStyle = '#8C8F8A'; g.fillText(h+' h', px(h)-10, Y0+MAX_H*RH+14);
+  }
+  for(let i=0;i<cohortes.length;i++){
+    const c = cohortes[i];
+    const y = Y0 + i*RH + RH/2;
+    g.fillStyle = '#8C8F8A'; g.fillText(String(i+1), 10, y+4);
+    for(let h=c.nace; h<tAhora; h++){
+      g.strokeStyle = '#E05A2B';
+      g.globalAlpha = Math.max(0.07, (c.hist[h - c.nace] || 0) / c.a0);
+      g.lineWidth = 6; g.lineCap = 'butt';
+      g.beginPath(); g.moveTo(px(h), y); g.lineTo(px(h+1), y); g.stroke();
+      g.globalAlpha = 1;
+    }
+    g.beginPath(); g.fillStyle = '#1F6FB2'; g.arc(px(c.nace), y, 3.5, 0, 7); g.fill();
+  }
+  for(const te of eluciones){
+    g.strokeStyle = '#E05A2B'; g.setLineDash([2,4]); g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(px(te), Y0-6); g.lineTo(px(te), Y0+MAX_H*RH); g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = '#E05A2B'; g.fillText('elución', px(te)+4, Y0+MAX_H*RH-4);
+  }
+  if(tAhora > 0){
+    g.strokeStyle = '#8C8F8A'; g.setLineDash([4,4]); g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(px(tAhora), Y0-10); g.lineTo(px(tAhora), Y0+MAX_H*RH); g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = '#8C8F8A'; g.fillText('ahora', px(tAhora)+5, Y0-2);
+  }
+}
+
+function eluir(){
+  const total = aHijo();
+  if(total < 1){
+    document.getElementById('narracion').innerHTML = 'Todavía no hay Tc-99m (hijo) acumulado que eluir: avanza algunas horas primero para que el Mo-99 (padre) cargue la columna.';
+    return;
+  }
+  const ef = Number(document.getElementById('selEf').value)/100;
+  const jeringa = ef * total;
+  for(const c of cohortes) c.aNow *= (1 - ef);
+  eluciones.push(tAhora);
+  totalEluido += jeringa;
+  const resto = aHijo();
+  puntos.hijo.push({x:tAhora, y:resto});
+  document.getElementById('valJeringa').innerHTML = fmt(jeringa) + ' <small>mCi</small>';
+  document.getElementById('notaJeringa').textContent = gbq(jeringa) + ' GBq · eficiencia ' + Math.round(ef*100) + '% · a las ' + tAhora + ' h · acumulado ' + fmt(totalEluido) + ' mCi';
+  document.getElementById('narracion').innerHTML = '<strong>Elución a las ' + tAhora + ' h (eficiencia ' + Math.round(ef*100) + '%):</strong> la jeringa se lleva <strong>' + fmt(jeringa) + ' mCi</strong> (' + gbq(jeringa) + ' GBq) de Tc-99m (hijo). En la columna quedan ' + fmt(resto) + ' mCi de hijo. El Mo-99 (padre) no se toca — sigue en ' + fmt(aPadre(tAhora)) + ' mCi — así que las próximas cohortes reconstruirán la pila hacia el mismo balance del 96%.';
+  dibujar(); tarjetas(); grafico.update('none');
+}
+
+const grafico = new Chart(document.getElementById('chGrafico'), {
+  type:'line',
+  data:{ datasets:[
+    { label:'A Tc-99m (hijo)', data: puntos.hijo, borderColor:'#E05A2B', borderWidth:2.5,
+      pointRadius:2.5, pointBackgroundColor:'#E05A2B', tension:0.15 },
+    { label:'A Mo-99 (padre)', data: puntos.padre, borderColor:'#1F6FB2', borderWidth:2,
+      borderDash:[6,4], pointRadius:0, tension:0.15 },
+    { label:'Alimenta al hijo (87.6%)', data: puntos.alimenta, borderColor:'#7FB0D8', borderWidth:1.5,
+      borderDash:[2,3], pointRadius:0, tension:0.15 }
+  ]},
+  options:{
+    responsive:true, maintainAspectRatio:false, animation:false, parsing:false,
+    plugins:{
+      legend:{ display:false },
+      tooltip:{ callbacks:{
+        title: it => 't = ' + it[0].parsed.x + ' h',
+        label: it => it.dataset.label + ': ' + Math.round(it.parsed.y).toLocaleString('es-CL') + ' mCi (' + (it.parsed.y*0.037).toFixed(1) + ' GBq)'
+      }}
+    },
+    scales:{
+      x:{ type:'linear', min:0, max:MAX_H+2, title:{display:true, text:'tiempo desde la calibración (h)'}, grid:{ color:'#EFF1EE' } },
+      y:{ min:0, suggestedMax:1100, title:{display:true, text:'actividad (mCi)'}, grid:{ color:'#EFF1EE' },
+          ticks:{ callback: v => Number(v).toLocaleString('es-CL') } }
+    }
+  }
+});
+
+document.getElementById('btnPaso').addEventListener('click', paso);
+document.getElementById('btnPaso6').addEventListener('click', () => { for(let i=0;i<6;i++) paso(); });
+document.getElementById('btnPaso12').addEventListener('click', () => { for(let i=0;i<12;i++) paso(); });
+document.getElementById('btnEluir').addEventListener('click', eluir);
+document.getElementById('btnReiniciar').addEventListener('click', reiniciar);
+reiniciar();
+</script>
+</body>
+</html>
